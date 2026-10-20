@@ -7,10 +7,13 @@ import { bots } from "@/lib/steps";
 import {
   brand,
   currency,
+  currencyLabel,
   discountPercent,
   offerCountdownSeconds,
   plans,
   riskDisclaimer,
+  showCountdown,
+  showDiscount,
 } from "@/lib/config";
 import type { FlowCtx } from "@/components/quiz/types";
 
@@ -28,18 +31,44 @@ function useCountdown(total: number) {
 export default function OfferStep({ ctx }: { ctx: FlowCtx }) {
   const bot = bots.find((b) => b.id === ctx.answers.botId) ?? bots[0];
   const [planId, setPlanId] = useState("w4");
-  const [modal, setModal] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const { mm, ss } = useCountdown(offerCountdownSeconds);
   const plan = plans.find((p) => p.id === planId) ?? plans[1];
-  const saved = plan.oldPrice - plan.price;
+
+  const pay = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          botId: bot.id,
+          email: ctx.answers.email,
+          name: ctx.answers.name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "No pudimos iniciar el pago.");
+      window.location.href = data.url; // pasa a la página segura de pago de Stripe
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos iniciar el pago.");
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="animate-rise pb-16">
       <div className="bg-gradient-to-b from-accent-deep to-ink px-4 pb-10 pt-6 text-center">
-        <p className="text-xs">
-          🎁 Descuento de bienvenida:{" "}
-          <span className="rounded bg-danger px-1.5 py-0.5 font-bold">{discountPercent}%</span>
-        </p>
+        {showDiscount && (
+          <p className="text-xs">
+            🎁 Descuento de bienvenida:{" "}
+            <span className="rounded bg-danger px-1.5 py-0.5 font-bold">{discountPercent}%</span>
+          </p>
+        )}
         <h2 className="mt-2 text-xl font-bold">
           Empieza el trading con IA
           <br />
@@ -63,13 +92,14 @@ export default function OfferStep({ ctx }: { ctx: FlowCtx }) {
           </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-accent/60 bg-accent/10 p-3">
-          <p className="text-center text-sm font-semibold">🏷️ ¡Tu código promocional se aplicó!</p>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 rounded-lg border border-accent bg-ink px-3 py-2 text-xs">✓ AUREX{discountPercent}</div>
-            <div className="rounded-lg bg-accent-deep px-3 py-2 text-lg font-bold tabular-nums">{mm} : {ss}</div>
+        {showCountdown && (
+          <div className="mt-5 rounded-xl border border-accent/60 bg-accent/10 p-3">
+            <p className="text-center text-sm font-semibold">🏷️ Tu oferta termina en</p>
+            <div className="mt-2 text-center">
+              <span className="rounded-lg bg-accent-deep px-3 py-2 text-lg font-bold tabular-nums">{mm} : {ss}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="mx-auto mt-6 grid w-full max-w-3xl gap-3 px-4 sm:grid-cols-3">
@@ -89,16 +119,20 @@ export default function OfferStep({ ctx }: { ctx: FlowCtx }) {
                 </span>
               )}
               <p className="text-sm font-bold">
-                {p.label}{" "}
-                <span className="ml-1 rounded bg-accent px-1 text-[10px] text-ink">{discountPercent}% OFF</span>
+                {p.label}
+                {showDiscount && (
+                  <span className="ml-2 rounded bg-accent px-1 text-[10px] text-ink">{discountPercent}% OFF</span>
+                )}
               </p>
               <p className="mt-3 rounded-lg bg-card py-3 text-center text-xl font-bold">
                 {currency}
-                {p.price.toFixed(2)}{" "}
-                <span className="text-xs font-normal text-white/60 line-through">
-                  {currency}
-                  {p.oldPrice.toFixed(2)}
-                </span>
+                {p.price.toFixed(2)} <span className="text-xs font-normal text-white/70">{currencyLabel}</span>
+                {showDiscount && p.oldPrice && (
+                  <span className="ml-1 text-xs font-normal text-white/60 line-through">
+                    {currency}
+                    {p.oldPrice.toFixed(2)}
+                  </span>
+                )}
               </p>
             </button>
           );
@@ -107,15 +141,36 @@ export default function OfferStep({ ctx }: { ctx: FlowCtx }) {
 
       <div className="mx-auto mt-6 w-full max-w-md px-4 text-center">
         <p className="rounded-lg border border-line p-3 text-[11px] leading-relaxed text-white/80">
-          Al hacer clic en Activar mi bot, aceptas pagar {currency}
-          {plan.price.toFixed(2)} por el {plan.label.toLowerCase()}. {/* TODO: define aquí tus condiciones reales de renovación y cancelación. */}
+          Pago único de {currency}
+          {plan.price.toFixed(2)} {currencyLabel} por el {plan.label.toLowerCase()}. No se renueva automáticamente.
+          Pagas en la página segura de Stripe: no guardamos los datos de tu tarjeta.
         </p>
+
+        <label className="mt-4 flex items-start gap-3 text-left text-[12px] text-white/85">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[#5eead4]"
+          />
+          <span>
+            Acepto los{" "}
+            <a href="#" className="text-sky-400 underline">términos y condiciones</a> y la{" "}
+            <a href="#" className="text-sky-400 underline">política de reembolso</a>.
+          </span>
+        </label>
+
         <button
-          onClick={() => setModal(true)}
-          className="mt-4 w-full rounded-lg bg-accent py-4 text-sm font-bold uppercase text-ink hover:bg-accent-dark"
+          onClick={pay}
+          disabled={!accepted || loading}
+          className={`mt-4 w-full rounded-lg py-4 text-sm font-bold uppercase text-ink transition ${
+            !accepted || loading ? "cursor-not-allowed bg-accent-deep/80 text-ink/70" : "bg-accent hover:bg-accent-dark"
+          }`}
         >
-          Activar mi bot
+          {loading ? "Abriendo el pago seguro…" : "Activar mi bot"}
         </button>
+        {error && <p className="mt-3 text-xs text-danger">{error}</p>}
+
         <p className="mt-4 text-[11px] text-white/70">{riskDisclaimer}</p>
         <p className="mt-2 text-[10px] text-white/50">{brand.company}</p>
       </div>
@@ -123,49 +178,6 @@ export default function OfferStep({ ctx }: { ctx: FlowCtx }) {
       <div className="mt-10 px-4">
         <Testimonials />
       </div>
-
-      {modal && (
-        <div className="fixed inset-0 z-50 flex justify-center bg-black/70" onClick={() => setModal(false)}>
-          <div
-            className="h-full w-full max-w-sm overflow-y-auto bg-ink p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <button aria-label="Cerrar" onClick={() => setModal(false)} className="text-lg">
-                ✕
-              </button>
-              <h3 className="text-sm font-bold">Resumen de pago</h3>
-              <span className="w-5" />
-            </div>
-
-            <div className="mt-4 rounded-lg bg-danger/90 p-3 text-center text-xs font-bold">
-              ⏱ Tu descuento está reservado por {mm}:{ss} min
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs">
-              <p className="flex justify-between"><span>Reto de trading con IA</span><b>{currency}{plan.oldPrice.toFixed(2)}</b></p>
-              <p className="flex justify-between text-danger"><span>{discountPercent}% de descuento</span><b>-{currency}{saved.toFixed(2)}</b></p>
-            </div>
-            <div className="mt-3 border-t border-line pt-3">
-              <p className="flex justify-between text-sm font-bold"><span>Total</span><span>{currency}{plan.price.toFixed(2)}</span></p>
-              <p className="mt-1 text-right text-[11px] text-danger">
-                Acabas de ahorrar {currency}{saved.toFixed(2)} ({discountPercent}% de descuento)
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-lg border border-dashed border-line p-4 text-center text-xs text-white/70">
-              Pasarela de pago de demostración.
-              <br />
-              Conecta aquí tu proveedor (Stripe, Niubiz, Culqi, Mercado Pago…). Esta pantalla no procesa pagos
-              ni solicita datos de tarjeta.
-            </div>
-
-            <button disabled className="mt-4 w-full cursor-not-allowed rounded-lg bg-accent-deep/80 py-3 text-xs font-bold uppercase text-ink/70">
-              🔒 Confirmar pago (demo)
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
