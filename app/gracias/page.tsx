@@ -20,7 +20,7 @@ export default async function Gracias({ searchParams }: { searchParams: { sessio
   const pending = session && !paid && session.status === "complete"; // OXXO / SPEI en espera
 
   return (
-    <>
+    <div className="min-h-screen bg-ink font-sans text-white">
       <Header />
       <main className="mx-auto max-w-md px-4 pt-14 text-center">
         {paid && (
@@ -58,6 +58,6 @@ export default async function Gracias({ searchParams }: { searchParams: { sessio
           Volver al inicio
         </Link>
       </main>
-    </>
+    </div>
   );
 }

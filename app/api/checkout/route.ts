@@ -50,7 +50,8 @@ export async function POST(req: Request) {
         name: (body.name ?? "").slice(0, 60),
       },
       // Los métodos de pago (tarjeta, OXXO, SPEI…) se activan desde el panel de Stripe.
-      success_url: `${base}/gracias?session_id={CHECKOUT_SESSION_ID}`,
+      // Después de pagar, el cliente crea su cuenta (su correo ya viene de esta compra).
+      success_url: `${base}/registro?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/?pago=cancelado`,
     });
 
