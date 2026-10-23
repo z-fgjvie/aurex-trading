@@ -81,7 +81,7 @@ export default function HomeView() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[14px] font-semibold opacity-80">
-                Saldo virtual
+                Saldo disponible
               </p>
               <p className="tabnum mt-1 font-display text-[2.6rem] font-semibold leading-none sm:text-[3.2rem]">
                 {money(equity)}
