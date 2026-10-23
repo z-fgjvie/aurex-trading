@@ -1,6 +1,6 @@
 import { brand } from "@/lib/config";
 
-export default function BrandMark({ className = "" }: { className?: string }) {
+export default function BrandMark({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden>
@@ -12,7 +12,7 @@ export default function BrandMark({ className = "" }: { className?: string }) {
         </defs>
         <path d="M13 2 24 22H17.5L13 13.5 8.5 22H2z" fill="url(#brandmark-g)" />
       </svg>
-      <span className="font-display text-[1.35rem] font-semibold tracking-tight text-fg">{brand.name}</span>
+      <span className={`font-display text-[1.35rem] font-semibold tracking-tight text-fg ${compact ? "hidden min-[430px]:inline" : ""}`}>{brand.name}</span>
     </span>
   );
 }

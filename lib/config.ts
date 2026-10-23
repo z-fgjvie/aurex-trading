@@ -19,11 +19,17 @@ export const legalLinks = [
 ];
 
 export const riskDisclaimer =
-  "Esto no es una garantía de resultados. El trading implica riesgos y puedes perder dinero. Contenido educativo, no es asesoría financiera.";
+  "Contenido educativo para impulsar tus conocimientos en trading. Los resultados varían según la estrategia y las decisiones de cada persona. Aprende, practica y toma decisiones financieras con criterio propio.";
 
 // Reseñas: agrega SOLO reseñas reales de clientes que te hayan autorizado.
 // Mientras esté vacío, la sección de reseñas no se muestra.
-export type Testimonial = { name: string; city: string; title: string; text: string; date: string };
+export type Testimonial = {
+  name: string;
+  city: string;
+  title: string;
+  text: string;
+  date: string;
+};
 export const testimonials: Testimonial[] = [];
 
 export type Plan = {
@@ -42,7 +48,13 @@ export const currencyCode = "mxn"; // código ISO que recibe Stripe
 export const currencyLabel = "MXN";
 export const plans: Plan[] = [
   { id: "w1", label: "PLAN DE 1 SEMANA", price: 199, oldPrice: 398 },
-  { id: "w4", label: "PLAN DE 4 SEMANAS", price: 499, oldPrice: 998, popular: true },
+  {
+    id: "w4",
+    label: "PLAN DE 4 SEMANAS",
+    price: 499,
+    oldPrice: 998,
+    popular: true,
+  },
   { id: "w12", label: "PLAN DE 12 SEMANAS", price: 999, oldPrice: 1998 },
 ];
 

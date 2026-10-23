@@ -19,6 +19,10 @@ type Props = {
   /** Color del fondo del panel, para que las etiquetas se lean sobre las velas. */
   halo?: string;
   className?: string;
+  /** Decimales de los precios (por defecto 2). */
+  decimals?: number;
+  /** Texto del eje de tiempo por vela (por defecto "Día n"). */
+  axisLabel?: (candleIndex: number) => string;
 };
 
 const PAD = { l: 8, r: 62, t: 34, b: 26 };
@@ -46,7 +50,10 @@ export default function CandleChart({
   label,
   halo = "var(--surface)",
   className = "",
+  decimals = 2,
+  axisLabel,
 }: Props) {
+  const dec = decimals;
   const wrap = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
@@ -79,7 +86,7 @@ export default function CandleChart({
     const first = Math.ceil(lo / step);
     const last = Math.floor(hi / step);
     const ticks: number[] = [];
-    for (let i = first; i <= last; i++) ticks.push(Math.round(i * step * 100) / 100);
+    for (let i = first; i <= last; i++) ticks.push(Number((i * step).toFixed(dec + 2)));
     const slot = plotW / n;
     const vmax = Math.max(...candles.map((c) => c.v));
     return { n, plotW, volH, gap, priceH, hi, lo, ticks, slot, vmax };
@@ -102,7 +109,7 @@ export default function CandleChart({
   const sessionsPerLabel = Math.max(1, Math.ceil(84 / (g.slot * perSession)));
   const timeLabels: { i: number; text: string }[] = [];
   for (let s = 0; s * perSession < candles.length; s += sessionsPerLabel) {
-    timeLabels.push({ i: s * perSession, text: `Día ${s + 1}` });
+    timeLabels.push({ i: s * perSession, text: axisLabel ? axisLabel(s * perSession) : `Día ${s + 1}` });
   }
 
   const idx = shownCount > 0 ? Math.min(hover ?? shownCount - 1, shownCount - 1) : -1;
@@ -153,7 +160,7 @@ export default function CandleChart({
               <g key={t}>
                 <line x1={PAD.l} x2={axisX} y1={y(t)} y2={y(t)} className="stroke-edge" strokeWidth={1} opacity={0.7} />
                 <text x={axisX + 8} y={y(t) + 4} fontSize={11} className="fill-muted tabnum">
-                  {t.toFixed(2)}
+                  {t.toFixed(dec)}
                 </text>
               </g>
             ))}
@@ -218,8 +225,8 @@ export default function CandleChart({
                       {l.name}
                     </text>
                     {l.name === "Entrada"
-                      ? pill(y(l.v), l.v.toFixed(2), "var(--surface-2)", "var(--fg)", "var(--fg)")
-                      : pill(y(l.v), l.v.toFixed(2), l.fill)}
+                      ? pill(y(l.v), l.v.toFixed(dec), "var(--surface-2)", "var(--fg)", "var(--fg)")
+                      : pill(y(l.v), l.v.toFixed(dec), l.fill)}
                   </g>
                 ))}
               </g>
@@ -231,14 +238,14 @@ export default function CandleChart({
             )}
 
             {/* Precio actual */}
-            {lastCandle && hover === null && !showLevels && pill(y(lastCandle.c), lastCandle.c.toFixed(2), lastUp ? "var(--up)" : "var(--down)")}
+            {lastCandle && hover === null && !showLevels && pill(y(lastCandle.c), lastCandle.c.toFixed(dec), lastUp ? "var(--up)" : "var(--down)")}
 
             {/* Cruz al pasar el cursor */}
             {hover !== null && shown && (
               <g>
                 <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={volBase} strokeDasharray="3 3" className="stroke-muted" strokeWidth={1} />
                 <line x1={PAD.l} x2={axisX} y1={y(shown.c)} y2={y(shown.c)} strokeDasharray="3 3" className="stroke-muted" strokeWidth={1} />
-                {pill(y(shown.c), shown.c.toFixed(2), "var(--surface-2)", "var(--muted)", "var(--fg)")}
+                {pill(y(shown.c), shown.c.toFixed(dec), "var(--surface-2)", "var(--muted)", "var(--fg)")}
               </g>
             )}
 
@@ -251,16 +258,16 @@ export default function CandleChart({
             {shown && (
               <>
                 <span>
-                  A <b className="font-medium text-fg">{shown.o.toFixed(2)}</b>
+                  A <b className="font-medium text-fg">{shown.o.toFixed(dec)}</b>
                 </span>
                 <span>
-                  Máx <b className="font-medium text-fg">{shown.h.toFixed(2)}</b>
+                  Máx <b className="font-medium text-fg">{shown.h.toFixed(dec)}</b>
                 </span>
                 <span>
-                  Mín <b className="font-medium text-fg">{shown.l.toFixed(2)}</b>
+                  Mín <b className="font-medium text-fg">{shown.l.toFixed(dec)}</b>
                 </span>
                 <span>
-                  C <b className="font-medium text-fg">{shown.c.toFixed(2)}</b>
+                  C <b className="font-medium text-fg">{shown.c.toFixed(dec)}</b>
                 </span>
                 <span className={change >= 0 ? "text-up" : "text-down"}>
                   {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}%
